@@ -1,0 +1,46 @@
+# Python
+__pycache__/
+*.py[cod]
+*.egg-info/
+.eggs/
+dist/
+build/
+*.egg
+.venv/
+venv/
+env/
+.env
+*.pyc
+
+# Java
+target/
+*.class
+*.jar
+*.war
+.gradle/
+*.iml
+.idea/
+
+# Node
+node_modules/
+.next/
+out/
+.vercel/
+*.log
+npm-debug.log*
+
+# Docker
+.dockerignore
+
+# OS
+.DS_Store
+Thumbs.db
+
+# IDE
+.vscode/
+*.swp
+
+# Secrets
+*.env
+.env.local
+.env.production
