@@ -1,0 +1,116 @@
+version: "3.9"
+
+# =============================================================================
+# Financial Crime Analytics Platform — Local Development Stack
+# =============================================================================
+# Usage:
+#   docker compose up -d          # start all services
+#   docker compose down -v        # stop and remove volumes
+#
+# WARNING: The credentials below are for LOCAL DEVELOPMENT ONLY.
+#          Never use these values in staging or production environments.
+# =============================================================================
+
+services:
+
+  # ---------------------------------------------------------------------------
+  # AML API — Python analytics service
+  # ---------------------------------------------------------------------------
+  aml-api:
+    build:
+      context: ..
+      dockerfile: docker/Dockerfile
+    container_name: fcap-aml-api
+    restart: unless-stopped
+    environment:
+      - PYTHONPATH=/app
+      - FCAP_ENV=development
+      - POSTGRES_HOST=postgres
+      - POSTGRES_PORT=5432
+      - POSTGRES_DB=${POSTGRES_DB:-fcap}
+      - POSTGRES_USER=${POSTGRES_USER:-fcap}
+      # Inject POSTGRES_PASSWORD via .env file or CI secrets — never hard-code
+      - POSTGRES_PASSWORD=${POSTGRES_PASSWORD:?POSTGRES_PASSWORD must be set in .env or environment}
+    ports:
+      - "8000:8000"
+    depends_on:
+      postgres:
+        condition: service_healthy
+    networks:
+      - fcap-network
+    volumes:
+      - ../python:/app/python:ro   # mount source for hot-reload in dev
+    healthcheck:
+      test: ["CMD", "python", "-c", "import python.aml; print('ok')"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 15s
+
+  # ---------------------------------------------------------------------------
+  # PostgreSQL — transactional database (alerts, cases, entities, transactions)
+  # ---------------------------------------------------------------------------
+  postgres:
+    image: postgres:15-alpine
+    container_name: fcap-postgres
+    restart: unless-stopped
+    environment:
+      POSTGRES_DB:       ${POSTGRES_DB:-fcap}
+      POSTGRES_USER:     ${POSTGRES_USER:-fcap}
+      # Inject POSTGRES_PASSWORD via .env file — never commit a real value here
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:?POSTGRES_PASSWORD must be set in .env or environment}
+      PGDATA:            /var/lib/postgresql/data/pgdata
+    ports:
+      - "5432:5432"
+    volumes:
+      - postgres-data:/var/lib/postgresql/data
+      # Auto-initialise schema on first startup
+      - ../sql/schema:/docker-entrypoint-initdb.d:ro
+    networks:
+      - fcap-network
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U fcap -d fcap"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+      start_period: 20s
+
+  # ---------------------------------------------------------------------------
+  # pgAdmin — database administration UI
+  # ---------------------------------------------------------------------------
+  pgadmin:
+    image: dpage/pgadmin4:latest
+    container_name: fcap-pgadmin
+    restart: unless-stopped
+    environment:
+      PGADMIN_DEFAULT_EMAIL:    ${PGADMIN_EMAIL:-admin@fcap.local}
+      # Inject PGADMIN_DEFAULT_PASSWORD via .env file — never commit a real value here
+      PGADMIN_DEFAULT_PASSWORD: ${PGADMIN_PASSWORD:?PGADMIN_PASSWORD must be set in .env or environment}
+      PGADMIN_LISTEN_PORT:      5050
+      PGADMIN_CONFIG_SERVER_MODE: "False"   # desktop-mode for local dev
+    ports:
+      - "5050:5050"
+    volumes:
+      - pgadmin-data:/var/lib/pgadmin
+    depends_on:
+      postgres:
+        condition: service_healthy
+    networks:
+      - fcap-network
+
+# =============================================================================
+# Networks
+# =============================================================================
+networks:
+  fcap-network:
+    driver: bridge
+    name: fcap-network
+
+# =============================================================================
+# Volumes
+# =============================================================================
+volumes:
+  postgres-data:
+    name: fcap-postgres-data
+  pgadmin-data:
+    name: fcap-pgadmin-data
