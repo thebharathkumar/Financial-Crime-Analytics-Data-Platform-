@@ -29,6 +29,12 @@ out/
 *.log
 npm-debug.log*
 
+# Test cache
+.pytest_cache/
+coverage/
+.coverage
+htmlcov/
+
 # Docker
 .dockerignore
 
