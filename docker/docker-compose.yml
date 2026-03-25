@@ -27,10 +27,10 @@ services:
       - FCAP_ENV=development
       - POSTGRES_HOST=postgres
       - POSTGRES_PORT=5432
-      - POSTGRES_DB=fcap
-      - POSTGRES_USER=fcap
-      # In production, inject via secrets manager, not env var
-      - POSTGRES_PASSWORD=changeme_in_production
+      - POSTGRES_DB=${POSTGRES_DB:-fcap}
+      - POSTGRES_USER=${POSTGRES_USER:-fcap}
+      # Inject POSTGRES_PASSWORD via .env file or CI secrets — never hard-code
+      - POSTGRES_PASSWORD=${POSTGRES_PASSWORD:?POSTGRES_PASSWORD must be set in .env or environment}
     ports:
       - "8000:8000"
     depends_on:
@@ -55,10 +55,10 @@ services:
     container_name: fcap-postgres
     restart: unless-stopped
     environment:
-      POSTGRES_DB:       fcap
-      POSTGRES_USER:     fcap
-      # IMPORTANT: Change this password before deploying to any shared environment
-      POSTGRES_PASSWORD: changeme_in_production
+      POSTGRES_DB:       ${POSTGRES_DB:-fcap}
+      POSTGRES_USER:     ${POSTGRES_USER:-fcap}
+      # Inject POSTGRES_PASSWORD via .env file — never commit a real value here
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:?POSTGRES_PASSWORD must be set in .env or environment}
       PGDATA:            /var/lib/postgresql/data/pgdata
     ports:
       - "5432:5432"
@@ -83,9 +83,9 @@ services:
     container_name: fcap-pgadmin
     restart: unless-stopped
     environment:
-      PGADMIN_DEFAULT_EMAIL:    admin@fcap.local
-      # IMPORTANT: Change before any shared deployment
-      PGADMIN_DEFAULT_PASSWORD: changeme_in_production
+      PGADMIN_DEFAULT_EMAIL:    ${PGADMIN_EMAIL:-admin@fcap.local}
+      # Inject PGADMIN_DEFAULT_PASSWORD via .env file — never commit a real value here
+      PGADMIN_DEFAULT_PASSWORD: ${PGADMIN_PASSWORD:?PGADMIN_PASSWORD must be set in .env or environment}
       PGADMIN_LISTEN_PORT:      5050
       PGADMIN_CONFIG_SERVER_MODE: "False"   # desktop-mode for local dev
     ports:

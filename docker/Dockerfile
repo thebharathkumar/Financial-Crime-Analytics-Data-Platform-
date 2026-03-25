@@ -32,9 +32,9 @@ USER fcap
 # Expose the service port
 EXPOSE 8000
 
-# Health-check via the Python HTTP module (no extra dependencies needed)
+# Health-check: verify the AML library is importable (no HTTP server in base image)
 HEALTHCHECK --interval=30s --timeout=5s --start-period=10s --retries=3 \
-    CMD python -c "import urllib.request; urllib.request.urlopen('http://localhost:8000/health')" \
+    CMD python -c "from python.aml import entity_resolution, risk_scoring, data_quality, pipeline; print('ok')" \
     || exit 1
 
 # Default entry point — runs the AML pipeline as a module.

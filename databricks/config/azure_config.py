@@ -7,9 +7,25 @@ Azure Key Vault or environment variables — never stored in source code.
 
 from __future__ import annotations
 
+import logging
 import os
 from dataclasses import dataclass
 from typing import Dict, Optional
+
+logger = logging.getLogger(__name__)
+
+
+def _warn_missing_url(environment: str) -> str:
+    """Emit a warning and return a clearly-invalid sentinel URL."""
+    url = f"https://UNCONFIGURED-FCAP-{environment.upper()}.azuredatabricks.net"
+    logger.warning(
+        "FCAP_%s_DATABRICKS_URL is not set. "
+        "Set this environment variable before connecting to Databricks. "
+        "Using sentinel value: %s",
+        environment.upper(),
+        url,
+    )
+    return url
 
 
 @dataclass
@@ -133,9 +149,8 @@ def get_config(environment: str = "dev") -> AzureConfig:
         container_name         = os.environ.get(f"FCAP_{env_upper}_CONTAINER",          f"fcap-{environment}-data"),
         key_vault_name         = os.environ.get(f"FCAP_{env_upper}_KEY_VAULT",          f"fcap-{environment}-kv"),
         databricks_workspace_url = os.environ.get(
-            f"FCAP_{env_upper}_DATABRICKS_URL",
-            f"https://adb-placeholder.{environment}.azuredatabricks.net",
-        ),
+            f"FCAP_{env_upper}_DATABRICKS_URL"
+        ) or _warn_missing_url(environment),
         resource_group         = os.environ.get(f"FCAP_{env_upper}_RESOURCE_GROUP",    f"rg-fcap-{environment}"),
         subscription_id        = os.environ.get("AZURE_SUBSCRIPTION_ID"),
         location               = os.environ.get(f"FCAP_{env_upper}_LOCATION",           "japaneast"),
